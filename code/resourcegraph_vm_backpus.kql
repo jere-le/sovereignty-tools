@@ -1,0 +1,21 @@
+RecoveryServicesResources
+| where type =~ 'Microsoft.RecoveryServices/vaults/backupFabrics/protectionContainers/protectedItems'
+| where properties.backupManagementType == 'AzureIaasVM'
+| extend vaultName = split(split(id, '/Microsoft.RecoveryServices/vaults/')[1], '/')[0]
+| extend friendlyName = tostring(properties.friendlyName)
+| extend sourceResourceId = tostring(properties.sourceResourceId)
+| extend dsResourceGroup = split(split(sourceResourceId, '/resourceGroups/')[1], '/')[0]
+| extend dsSubscription = split(split(sourceResourceId, '/subscriptions/')[1], '/')[0]
+| extend lastRestorePoint = todatetime(properties.lastRecoveryPoint)
+| extend policyName = tostring(properties.policyName)
+| extend protectionState = tostring(properties.currentProtectionState)
+| where protectionState in~ (
+    'ConfiguringProtection',
+    'ProtectionConfigured',
+    'ConfiguringProtectionFailed',
+    'ProtectionStopped',
+    'SoftDeleted',
+    'ProtectionError'
+)
+| project vaultName, friendlyName, sourceResourceId, dsSubscription, dsResourceGroup, lastRestorePoint, policyName, protectionState
+| order by friendlyName asc
