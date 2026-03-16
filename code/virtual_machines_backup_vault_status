@@ -1,0 +1,21 @@
+resources
+| where type == "microsoft.compute/virtualmachines"
+| project 
+    vmId = tolower(id), 
+    vmName = name, 
+    resourceGroup, 
+    subscriptionId,
+    powerState = tostring(properties.extended.instanceView.powerState.displayStatus)
+| join kind=leftouter (
+    recoveryservicesresources
+    | where type == "microsoft.recoveryservices/vaults/backupfabrics/protectioncontainers/protecteditems"
+    | where properties.backupManagementType == "AzureIaasVM"
+    | project 
+        vmId = tolower(tostring(properties.virtualMachineId)),
+        vaultName = split(id, "/")[8],
+        backupState = tostring(properties.currentProtectionState),
+        lastBackup = tostring(properties.lastBackupTime),
+        policyName = tostring(properties.policyName)
+) on vmId
+| project vmName, resourceGroup, subscriptionId, powerState, vaultName, backupState, lastBackup, policyName
+| order by vmName asc
